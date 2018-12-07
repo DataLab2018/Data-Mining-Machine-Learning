@@ -1,0 +1,110 @@
+library(cluster)
+library(ggplot2)
+library(dendextend)
+library(dplyr)
+library(datasets)
+library(NbClust)
+library(heatmaply)
+library(factoextra)
+data = read.csv("Wholesale customers data.csv")
+str(data)
+summary(data)
+plot(data)
+# check if there are missing values
+which(complete.cases(data)==F)
+
+data1<-scale(data[,-c(1,2)])
+summary(data1)
+
+# get optimal number of clusters
+# Elbow method for k-means clustering
+set.seed(123)
+# Compute and plot wss for k = 2 to k = 10
+
+k.max <- 10 # Maximal number of clusters
+wss <- sapply(1:k.max, 
+              function(k){kmeans(data1, k, nstart=10 )$tot.withinss})
+plot(1:k.max, wss,
+     type="b", pch = 19, frame = FALSE, 
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
+abline(v = 3, lty =2)
+
+
+# Average silhouette method for k-means clustering
+
+k.max <- 10
+sil <- rep(0, k.max)
+
+# Compute the average silhouette width for 
+# k = 2 to k = 10
+for(i in 2:k.max){
+  km.res <- kmeans(data, centers = i, nstart = 25)
+  ss <- silhouette(km.res$cluster, dist(data))
+  sil[i] <- mean(ss[, 3])
+}
+
+# Plot the  average silhouette width
+plot(1:k.max, sil, type = "b", pch = 19, 
+     frame = FALSE, xlab = "Number of clusters k")
+abline(v = which.max(sil), lty = 2)
+
+fviz_nbclust(data1, hcut, method = "silhouette",
+             hc_method = "complete")
+
+
+bestK <- NbClust(data1, distance = "euclidean", min.nc = 2,
+              max.nc = 10, method = "complete", index ="all")
+fviz_nbclust(bestK) + theme_minimal()
+
+# using NbClust for number of clusters
+
+bestK <- NbClust(data1, min.nc=2, max.nc=15, method="kmeans",index='ch')
+bestK$Best.nc
+fviz_nbclust(data1,kmeans, method="wss")+
+  geom_vline(xintercept = 3, linetype=2)+
+  labs(subtitle ="withinss")
+
+# Kmeans for 3 clusters
+set.seed(2345)
+Clusters <- kmeans(data1, 3)
+Clusters$size
+Clusters$centers
+str(Clusters)
+fviz_cluster(Clusters, data = data1, geom = "point",
+             stand = FALSE, frame.type = "norm")
+??fviz_cluster
+
+barplot(Clusters$size, names.arg=c("Cluster 1","Cluster 2","Cluster 3"), ylab="Count", 
+        main="Barplot of Cluster Size")
+Clusters$size
+table(Clusters$size)
+cluster1size<-((Clusters$size)[1]/sum(Clusters$size))*100
+cluster2size<-((Clusters$size)[2]/sum(Clusters$size))*100
+cluster3size<-((Clusters$size)[3]/sum(Clusters$size))*100
+Clusters$size
+cmatrix <- cbind(cluster1size,cluster2size,cluster3size)
+cmatrix
+
+# PAM 
+pam.clusters<- pam(data1, 3)
+
+# Visualize pam clusters
+
+fviz_cluster(pam.clusters, stand = FALSE, geom = "point",
+             frame.type = "norm")
+summary(pam.clusters)
+
+
+# Enhanced hierarchical clustering, cut in 3 groups
+
+hc <- data1 %>%
+   eclust("hclust", k = 3, graph = FALSE)
+
+# Visualize with factoextra
+
+fviz_dend(hc, palette = "jco",
+          rect = TRUE, show_labels = FALSE)
+fviz_silhouette(hc)
+
+
