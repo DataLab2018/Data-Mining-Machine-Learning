@@ -1,0 +1,92 @@
+library(arules)
+library(arulesViz)
+library(grid)
+mydata <- read.transactions("TransactionList1.csv",format="single",sep=",",cols=c(1,2))
+class(mydata)
+summary(mydata)
+
+# plot frequencies of frequent items in the dataset
+itemFrequencyPlot(mydata, support=0.1, cex.names=0.8)
+
+itemFrequencyPlot(mydata,topN=20,type="absolute")
+
+# itemFrequencyPlot(mydata, topN=20,support=0.1, cex.names=0.8)
+# Mine association rules using Apriori algorithm implemented in arules.
+
+rules <- apriori(mydata, parameter = list(supp = 0.01, conf = 0.2))
+
+
+#summary of rules
+summary(rules)
+inspect(head(sort(rules, by ="count")))
+
+#Find subset of rules that has Wine on the right hand side
+
+WineRules <- subset(rules, subset = rhs %pin% "Wine")
+summary(WineRules)
+inspect(WineRules)
+plot(WineRules,method="graph",interactive=FALSE,shading=NA)
+
+#Find subset of rules that has Wine and Beer in the left hand side.
+
+WineRules1 <- subset(rules, subset = lhs %ain%  "Wine"|lhs %ain%  "Beer" )
+summary(WineRules1)
+inspect(WineRules1)
+
+plot(WineRules1,method="graph",interactive=FALSE,shading=NA)
+#generating rules for beer on RHS from  mydata using apriori algorithm
+BeerRule<-apriori(data=mydata, parameter=list(supp=0.01,conf = 0.15,minlen=2), 
+                  appearance = list(default="lhs",rhs="Beer"),
+                  control = list(verbose=F))
+#Sorting Beerrule by confidence in descending order
+Beerrules1<-sort(BeerRule, decreasing=TRUE,by="confidence")
+summary(Beerrules1)
+inspect(Beerrules1)
+plot(BeerRule,method="graph",interactive=FALSE,shading=NA)
+
+# Subrules for Fresh Vegetables on the rhs
+Fresh_Rules <- subset(rules, subset = rhs %pin% "Fresh Vegetables")
+summary(Fresh_Rules)
+inspect(Fresh_Rules[1:20])
+
+# Subrules for Fresh Fruit on the rhs
+Fresh_Rules1 <- subset(rules, subset = rhs %pin% "Fresh Fruit")
+summary(Fresh_Rules1)
+inspect(Fresh_Rules1[1:20])
+
+# subrule for both Fresh Fruit and Fresh Vegetable on the lhs
+Fresh_Rules2 <- subset(rules, subset = lhs %ain% c("Fresh Fruit", "Fresh Vegetables"))
+summary(Fresh_Rules2)
+inspect(Fresh_Rules2)
+
+# Subrule for fresh Vegetable and Canned Vegetables on lhs.
+canned_Rules <- subset(rules, subset = lhs %ain% c("Fresh Vegetables", "Canned Vegetables"))
+summary(canned_Rules)
+inspect(canned_Rules[1:20])
+
+
+# 3.Small and Large transaction
+
+#Subrule for small baskets with item less than or equal to 2
+rulesSmall <- subset(rules, subset = size(rules) <=2 )
+#summary for ruleSmallSize
+summary(rulesSmall)
+inspect(rulesSmall[1:20])
+
+
+# Subrule for Large baskets with item more than or equal to 5
+rulesLarge <- subset(rules, subset = size(rules) >= 5 )
+summary(rulesLarge)
+inspect(head(sort(rulesLarge, by ="lift"),5))
+
+# 4.One more intresting pattern:Milk and Cereal
+# Subsets. find subset of rules that has Milk on the Rhs and Cereal on lhs
+
+Rulesinterest <- subset(rules, subset = rhs %pin%  "Milk" & lhs %ain% "Eggs")
+summary(Rulesinterest)
+inspect(Rulesinterest)
+#Subsets. find subset of rules that has Milk on the lhs and Cereal on rhs
+Rulesinterest1 <- subset(rules, subset = lhs %ain%  "Milk" & rhs %ain% "Cereal")
+summary(Rulesinterest1)
+inspect(Rulesinterest1)
+plot(Rulesinterest1, method="graph")
