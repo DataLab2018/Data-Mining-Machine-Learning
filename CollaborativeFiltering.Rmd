@@ -1,0 +1,71 @@
+---
+title: "Collaborative Filtering with R"
+output: html_notebook
+---
+
+***
+**Objective**: *Build a collaborative filtering model to recommend movies using the [MovieLense dataset](https://grouplens.org/datasets/movielens/)*
+
+***
+
+Load Libraries
+```{r}
+library(recommenderlab)
+library(data.table)
+```
+## 1. Data Preparation
+
+Load data and convert to ratings matrix. Using dcast to create matrix from data frame and then cast it to matrix, ratingmatrix
+```{r}
+ratings <- read.csv("ratings.csv")
+ratingmat <- dcast(ratings, userId~movieId, value.var = "rating", na.rm=FALSE)
+ratingmat <- as.matrix(ratingmat[,-1])
+ratingmat <- as(ratingmat, "realRatingMatrix")
+```
+
+###Visualize data
+```{r}
+image(ratingmat[1:100,1:100])
+```
+Look at number of raings per user
+```{r}
+hist(rowCounts(ratingmat))
+```
+
+Number of ratings per movie
+
+```{r}
+hist(colCounts(ratingmat))
+```
+
+
+Subset Movies that have been rated more than 50 times and Users who have rated atleast 25 movies
+
+```{r}
+Ratings50M <- ratingmat[rowCounts(ratingmat)>50,colCounts(ratingmat)>25]
+```
+
+```{r}
+Ratings50M
+```
+
+## 2. Modeling
+Create a recommender system using Userbased CF
+```{r}
+rmodel <- Recommender(Ratings50M, method = "UBCF")
+```
+Get recommendations for User 1
+```{r}
+recommendations <- predict(rmodel, Ratings50M[1:2], n=5)
+as(recommendations, "list")[[1]]
+```
+
+Load Movies
+```{r}
+movies <- read.csv("movies.csv")
+```
+List movies from recommendations
+```{r}
+movies[movies$movieId %in% as(recommendations, "list")[[1]],1:2]
+```
+
